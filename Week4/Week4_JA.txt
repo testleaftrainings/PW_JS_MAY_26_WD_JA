@@ -1,0 +1,291 @@
+Q1. Explain the use of "?" (optional parameter) 
+
+Ans: The ? (Optional Parameter / Property)
+ “This value is optional — you can give it or skip it.”
+ It helps your program not break even when the value is missing.
+
+Example: Optional Function Parameter
+function greet(name?: string) {
+  if (name) {
+    console.log(`Hello, ${name}!`);
+  } else {
+    console.log("Hello, Guest!");
+  }
+}
+
+greet("Gauthami"); // Hello, Gauthami!
+greet();            // Hello, Guest!
+
+
+The ? after a parameter makes it optional — no error even if you don’t pass that argument.
+Without ?, the argument is required and calling the function without it will throw an error//❌ Error – Argument required.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q2.Difference between `any`, `unknown`?
+
+Ans: these are the dataTypes available in Typescript
+
+1) any
+
+Definition: any allows any type of value.
+TypeScript stops checking type safety for that variable.
+
+let value: any;
+
+value = 10;
+value = "Hello";
+value = true;
+
+console.log(value); //  Works, TypeScript allows everything
+
+Pros: Very flexible
+Cons: No type safety → can lead to runtime errors
+
+2) unknown
+
+Definition:unknown also allows any type, but TypeScript forces you to check the type before using it.
+Safer than any.
+
+EX:
+let value: unknown;
+
+value = 10;
+value = "Hello";
+
+// console.log(value.toUpperCase()); // ❌ Error: Object is of type 'unknown'
+
+// Type check needed
+if (typeof value === "string") {
+  console.log(value.toUpperCase()); //  Works
+}
+
+Pros: Flexible and type-safe
+Cons: Need to do type checks before using
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q3. what is the difference between page.on and page.once?
+
+Page.on:
+--------
+page.on('dialog', callback)
+The callback will run every time a dialog appears, whether it’s a simple alert, confirmation, or prompt.
+So if your page triggers 3 alerts one after another, the callback executes 3 times, once for each alert.
+
+Syntax: 
+-------
+page.on('dialog', async dialog => {
+console.log('Dialog type:', dialog.type()); // alert, confirm, or prompt
+await dialog.dismiss(); // dismiss all dialogs
+});
+
+
+page.once:
+----------
+
+page.once('dialog', callback)
+The callback will run only for the first dialog that appears, regardless of type.
+After handling that first alert, it automatically stops listening.
+
+Syntax:
+-------
+page.once('dialog', async dialog => {
+    console.log('First dialog type:', dialog.type());
+    await dialog.accept(); // only handles the first dialog
+});
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Q4. What is the difference between `page.frame()` and `frameLocator()`?
+
+
+page.frame()
+------------
+Returns a Frame object, representing a specific <iframe> inside the page.
+
+Definition:
+const frame = page.frame({ name: 'iframe-name' });
+
+
+Parameters:
+name: Name of the iframe
+url: URL of the iframe (can use regex)
+Or any other frame identification
+
+Usage: You can then call methods like fill(), click(), locator() on the frame object.
+
+Example:
+
+const frame = page.frame({ name: 'myFrame' });
+if (frame) {
+  await frame.fill('#username', 'JohnDoe');
+  await frame.click('button[type="submit"]');
+}
+
+page.frameLocator()
+-------------------
+Returns a FrameLocator object, which allows locator-based interaction inside a frame.
+
+Definition:
+const frameLocator = page.frameLocator('#iframe-selector');
+
+You can chain locators to interact with elements inside the iframe. Works well for nested frames.
+
+Example:
+
+const frameLocator = page.frameLocator('#myFrame');
+await frameLocator.locator('#username').fill('JohnDoe');
+await frameLocator.locator('button[type="submit"]').click();
+s
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Q5. How do you handle windows in playwright? How do you close a child window and return to the parent?
+
+Window Handling
+-------------
+
+Window Handling is Managing/ Switching between multiple page objects (new tabs or browser windows) opened by the application within the same browser context.
+
+Types:
+
+Sequential Approach
+-------------------
+Sequential approach means handling multiple browser windows or tabs one after another in the order they open, by waiting for each new Page object and performing 
+actions step-by-step.
+
+const newPage = context.waitForEvent('page') // Pending  // Step 1 : Listener open
+await page.locator(`//div[contains(text(),"MOTOROLA g35 5G")]`).click();  // Step 2 : Click action/Click Event
+const childPage =   await newPage  // Step3 : Resolving the promise //The page is captured by this time// Promise is resolved ones playwright has captured the newPage
+that got launched
+
+Note: Simpler but may risk of missing the event if the page opens too quickly.
+----
+
+
+Concurrent Approach (Recommended)
+-------------------
+
+Concurrent approach in Playwright uses Promise.all() to wait for the popup and the triggering action simultaneously, ensuring reliable window handling without race 
+conditions.
+
+
+const [newPage] = await Promise.all([
+  context.waitForEvent('page'),
+  actionThatOpensNewPage()
+]);
+
+const [childPage] = await Promise.all([context.waitForEvent('page'),page.locator(`//div[text()="POCO C71 (Desert Gold, 64 GB)"]`).click()])
+
+**Ensures you never miss the page event.
+
+
+----------------------------------------------------
+
+How do you close a child window and return to the parent?
+
+Switch between pages using:
+--------------------------
+
+context.pages();       // Returns all open pages in the context
+newPage.bringToFront(); // Focus a specific page
+
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q6. How to automate file upload using playwright?
+
+
+Case 1: With <input type="file">
+
+await page.locator('input#fileUpload').setInputFiles("./Data/report.pdf");
+
+
+Case 2: Without <input type="file"> (using FileChooser)
+
+const fileUploader = page.waitForEvent("filechooser"); // promise and event listener
+await page.locator('#uploadButton').click(); // trigger file chooser
+(await fileUploader).setFiles("./Data/logindata.json");
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Q7. How can you verify the downloaded file name?
+
+Compare expected vs received filename.
+
+const expectedText = "report.pdf";
+const receivedText = downloader.suggestedFilename();
+
+expect(expectedText).toBe(receivedText);
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Q8. How do you validate the file type before uploading?
+
+import path from 'path';
+
+const ext = path.extname(filePath);
+expect(ext).toBe('.pdf'); // or any expected type
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q9. Will this code correctly handle dialogs?
+
+await page.getByRole('button').click();
+page.on('dialog', async dialog => {
+  console.log(dialog.message());
+  await dialog.accept('My Input Text');
+});
+
+No — the listener must be registered before the click:
+
+page.on('dialog', async dialog => {
+  console.log(dialog.message());
+  await dialog.accept('My Input Text');
+});
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q10. Test A runs as Admin, Test B as a standard user. Both reuse storageState to skip login. How do you ensure isolation?
+
+Create separate browser contexts for each user state:
+
+const adminContext = await browser.newContext({ storageState: 'adminState.json' });
+const userContext = await browser.newContext({ storageState: 'userState.json' });
+
+Avoid sharing the same storage file between parallel tests to prevent race conditions.
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Assignment:
+
+1. A legacy banking app uses nested iframes. The inner iframe’s ID is dynamic (e.g., `frame_882`).  
+How do you reliably click a button inside it without using the dynamic ID, and how do you avoid timeout if it loads slowly?
+
+Use Playwright’s `frameLocator()` to reference iframes by stable selectors, not IDs. `frameLocator()` auto-waits for nested frames and elements before interaction.
+
+const outerFrame = page.frameLocator('iframe[data-test="transaction-container"]');
+const innerFrame = outerFrame.frameLocator('iframe');
+await innerFrame.getByRole('button', { name: 'Submit Transaction' }).click();
+
+Playwright’s auto-waiting prevents timeouts if the frame or elements load slowly.
+
+
+2.How to upload and download file using page.on and page.once
+
+upload:
+
+import test from '@playwright/test'
+test("file upload method",async({page})=>{
+    page.on("filechooser",async(filechoose)=>{
+        await filechoose.setFiles("data/TestLeaf Logo.png")
+    })
+    await page.goto("https://leafground.com/file.xhtml")
+    await page.click("//span[text()='Choose']/following-sibling::input")
+})
+ 
+download: 
+
+test("file download",async({page})=>{
+    page.on("download",async(down)=>{
+        await down.saveAs("downloaded/"+down.suggestedFilename())
+    })
+    await page.goto("https://leafground.com/file.xhtml")
+   
+    await page.click("//span[text()='Download']")
+    await page.waitForTimeout(2000)
