@@ -1,0 +1,631 @@
+Q1.Your team is executing 500 test cases in CI/CD. Some tests are under development, some are failing due to application bugs, and some should run only in production. 
+How would you manage this using Playwright annotations?
+
+In a large CI/CD pipeline executing around 500 test cases, I would use Playwright annotations to control which tests run and how they are reported.
+
+test.skip() → For tests that are not applicable in the current environment or are temporarily disabled.
+test.fixme() → For tests blocked by known application defects or features under development.
+test.fail() → For tests that are expected to fail due to a known issue but should still be executed.
+test.slow() → For long-running tests that need additional timeout.
+test.only() → Mainly during local development for debugging; it should never be committed to the repository.
+ 
+Example
+
+import { test, expect } from '@playwright/test';
+
+test.fixme('Payment feature under development', async ({ page }) => {
+  // Test not executed
+});
+
+test('Production Audit Validation', async ({ page }) => {
+  test.skip(process.env.ENV !== 'PROD',
+    'Runs only in Production');
+
+  await page.goto('https://example.com');
+});
+
+test('Search functionality', async ({ page }) => {
+  test.fail(true, 'Known defect BUG-101');
+
+  await page.goto('https://example.com');
+  expect(await page.title()).toBe('Wrong Title');
+});
+
+test('Complete Order Flow', async ({ page }) => {
+  test.slow();
+
+  await page.goto('https://example.com');
+});
+
+
+Note: When to use fixme() instead of skip() for a known bug?
+
+skip() means we intentionally don't want to run the test.
+fixme() indicates the test is blocked by a known issue or unfinished feature and serves as documentation for the team.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Q2. Your application uses SSO login and MFA. If Login takes 2 minutes for every test, how will you avoid logging in repeatedly?
+
+I will authenticate once and save the session using Storage State. Then all tests will reuse the authenticated session.
+
+Features:
+---------
+
+Faster execution
+Avoid repeated login
+Stable automation
+
+
+Step 1: Create Auth File for storage state
+
+import { test } from '@playwright/test';
+
+test('Login and save state', async ({ page }) => {
+
+  await page.goto('https://example.com/login');
+
+  await page.fill('#username', 'admin');
+  await page.fill('#password', 'admin123');
+
+  await page.click('button[type="submit"]');
+
+  await page.context().storageState({
+    path: 'auth.json'
+  });
+});
+
+
+Step 2: Use Storage State
+
+import { test, expect } from '@playwright/test';
+
+test.use({
+  storageState: 'auth.json'
+});
+
+test('Dashboard Test', async ({ page }) => {
+
+  await page.goto('https://example.com/dashboard');
+
+  await expect(page).toHaveTitle(/Dashboard/);
+
+});
+
+
+Note: What gets stored in storage state?
+
+Cookies,Local Storage,Session information.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+3.If your framework contains Login, Search, Cart, and Checkout modules. How will you organize test cases?
+
+I organize test cases module-wise using test.describe() and maintain separate spec files for Login, Search, Cart, and Checkout. I use hooks within each describe 
+block for module-specific setup and teardown. This improves maintainability, readability, reporting, and selective execution in CI/CD pipelines.
+
+This helps in:
+
+Grouping related test cases together
+Applying common hooks (beforeEach, afterEach)
+Improving report readability
+Easier maintenance and execution
+
+tests/
+ ├── login.spec.ts
+ ├── search.spec.ts
+ ├── cart.spec.ts
+ └── checkout.spec.ts
+
+| Module   | Example Test Cases                                  |
+| -------- | --------------------------------------------------- |
+| Login    | Valid Login, Invalid Login                          |
+| Search   | Search Product, Search No Results                   |
+| Cart     | Add Product, Remove Product                         |
+| Checkout | Place Order, Payment Validation, Address Validation |
+
+ex:
+import { test, expect } from '@playwright/test';
+
+test.describe('Login Module', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('https://example.com/login');
+  });
+
+  test('Valid Login', async ({ page }) => {
+    // Test Steps
+  });
+
+  test('Invalid Login', async ({ page }) => {
+    // Test Steps
+  });
+
+});
+
+test.describe('Cart Module', () => {
+
+  test('Add Product to Cart', async ({ page }) => {
+    // Test Steps
+  });
+
+  test('Remove Product from Cart', async ({ page }) => {
+    // Test Steps
+  });
+
+});
+
+import { test, expect } from '@playwright/test';
+
+test.describe('Search Module', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('https://example.com');
+  });
+
+  test('Search Existing Product', async ({ page }) => {
+    // Search for iPhone
+  });
+
+  test('Search Non-Existing Product', async ({ page }) => {
+    // Search for invalid product
+  });
+
+});
+
+test.describe('Checkout Module', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('https://example.com');
+  });
+
+  test('Successful Checkout', async ({ page }) => {
+    // Complete checkout process
+  });
+
+  test('Checkout Without Address', async ({ page }) => {
+    // Verify validation message
+  });
+
+});
+
+Note:
+
+1. Why use test.describe()?
+
+Logical grouping of tests
+Common setup and teardown
+Better reporting
+Easier filtering and execution
+
+2. Can we have nested describe blocks?
+
+Nested describe is used when we need multiple levels of grouping. For example, in an e-commerce application, I can first group tests by user type 
+(Guest User and Registered User), and inside each group I can further organize tests into Search, Cart, and Checkout modules. This makes the test structure 
+cleaner and reports easier to understand.
+
+test.describe('E-Commerce', () => {
+
+  test.describe('Cart Module', () => {
+
+    test.describe('Guest User', () => {
+      // Tests
+    });
+
+    test.describe('Registered User', () => {
+      // Tests
+    });
+
+  });
+
+});
+
+3. Can we run only a specific module?
+
+Yes, Only Cart module tests can be executed.
+
+test.describe.only('Cart Module', () => {
+
+});
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q4. Suppose you need to execute the same login test for 100 different users. How would you read the test data and execute the test?
+
+Instead of hardcoding 100 usernames and passwords in the script, I would store the test data in an external file such as a CSV or Excel file. During execution, 
+I would read the data from the file and run the same login test for each user. This approach follows data-driven testing and makes maintenance easier.
+
+
+Advantages of CSV/Excel
+-----------------------
+
+Easy Maintenance
+Business users or testers can update data without touching code.
+
+Data-Driven Testing
+Same test can run with multiple datasets.
+
+Scalability
+Supports 100, 1000, or more records easily.
+
+Code Reusability
+One script can execute against many datasets.
+
+Separation of Data and Logic
+Test logic stays in code, test data stays in files.
+
+
+Note: Can we use JSON instead of CSV/Excel?
+-----
+
+Yes. We can use JSON, databases, APIs, CSV, or Excel. The choice depends on project requirements. CSV is commonly used for simple tabular data, while JSON is
+preferred for complex hierarchical data.
+
+ex:
+users.csv
+---------
+username,password
+admin,admin123
+user1,pass1
+user2,pass2
+
+CSV files are useful for data-driven testing.
+
+Install:
+
+npm install csv-parser
+Read CSV
+import fs from 'fs';
+import csv from 'csv-parser';
+
+//1. Reading Data from CSV File (Data-Driven Testing)
+//This code reads data from a CSV file and stores it in an array
+
+const users: any[] = [];
+
+fs.createReadStream('users.csv')
+  .pipe(csv())
+  .on('data', (row) => users.push(row))
+  .on('end', () => {
+    console.log(users);
+  });
+
+
+//Dynamic Tests in Playwright
+
+import { test } from '@playwright/test';
+
+const users = [
+  { username: 'admin', password: 'admin123' },
+  { username: 'user1', password: 'pass1' }
+];
+
+users.forEach(user => {
+
+  test(`Login for ${user.username}`, async ({ page }) => {
+
+    await page.goto('https://example.com');
+
+    await page.fill('#username', user.username);
+    await page.fill('#password', user.password);
+
+  });
+
+});
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+5. Your application has DEV, QA, UAT, and PROD environments. How will you avoid hardcoding URLs and credentials?
+
+I use .env files to externalize configuration.
+
+.env file
+----------
+BASE_URL=https://opensource-demo.orangehrmlive.com
+USERNAME=Admin
+PASSWORD=admin123
+
+Install
+-------
+npm install dotenv
+
+Read Values
+------------
+import dotenv from 'dotenv';
+dotenv.config();
+console.log(process.env.BASE_URL);
+
+Example:
+--------
+
+import { test } from '@playwright/test';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+test('Login', async ({ page }) => {
+
+  await page.goto(process.env.BASE_URL!);
+
+  await page.fill(
+    'input[name="username"]',
+    process.env.USERNAME!
+  );
+
+  await page.fill(
+    'input[name="password"]',
+    process.env.PASSWORD!
+  );
+
+});
+
+Note: Why use env files
+-----
+
+Security
+Environment switching
+Easy maintenance
+No hardcoded credentials
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+6. Your application uses SSO login with MFA and users prefer not to log in every time. You need to execute 500 test cases. Would you use storageState or a 
+Persistent Context? Why?
+
+1. Storage State
+
+stores
+------
+
+Cookies
+Local Storage
+Session information
+
+Purpose:
+--------
+
+Reuse login sessions
+Avoid logging in before every test
+
+Example:
+--------
+
+await page.context().storageState({
+  path: 'auth.json'
+});
+
+Later:
+------
+
+test.use({
+  storageState: 'auth.json'
+});
+
+Use Case:
+---------
+
+Login once to Salesforce, Jira, or any application.
+Save the session and reuse it in all tests.
+
+
+2. Persistent Context
+
+stores
+------
+
+Cookies
+Local Storage
+Browser History
+Saved Passwords
+Extensions
+Browser Settings
+
+Purpose:
+--------
+
+Reuse the entire browser profile
+
+Example:
+--------
+
+const context = await chromium.launchPersistentContext(
+  './user-data',
+  {
+    headless: false
+  }
+);
+
+const page = context.pages()[0];
+
+Use Case:
+---------
+
+Application requires browser extensions
+Client certificates are installed
+Custom browser settings must be preserved
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q7. What is the difference between UI testing and API testing?
+
+UI Testing:
+----------
+
+Purpose: UI testing is test how the application looks and behaves for the end user.
+Focus Area: UI: Frontend — buttons, forms, menus, visuals, navigation, etc.
+Tool Examples: UI-Selenium, Playwright, Cypress 
+Interface Tested: Graphical User Interface (GUI)
+Input/Output: User interacts through clicks, inputs, etc.
+Speed: Slower because it loads the full UI.
+Dependency: Depends on the application’s UI being ready.
+Error Detection: Finds UI bugs like broken buttons, misalignment.
+
+API Testing:
+------------
+
+Purpose: API is to test the backend logic, data exchange, and business rule
+Focus Area: API is Backend — request/response, status codes, data validation, etc.
+Tool Examples: UI-Selenium, Playwright, Cypress where as API
+Interface Tested: APIs (usually REST or SOAP services)
+Input/Output: Data is sent and received as JSON or XML.
+Speed: Faster since it doesn’t involve UI rendering.
+Dependency: Can be done even before UI is developed.
+Error Detection:Finds logic, performance, and data-related issues.
+
+ex: UI Testing: Checking if the “Login” button works when you click it on the webpage.
+    API Testing: Sending a POST request to the /login API and checking if it returns a success message and a token.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Q8. What is the difference between Path parameter and Query Parameter?
+
+Path Parameter:
+--------------
+
+A path parameter is part of the URL path itself and is used to identify a specific resource.
+Path parameters are used to identify a specific resource.
+
+EX: House number in an address
+
+Query Parameter:
+----------------
+Query parameters are used to filter or sort data
+A query parameter is added after ? in the URL and is used to filter or modify the response.
+
+Ex: Instructions to the delivery person
+
+https://www.amazon.com/s?k=phones&crid=23H4VILW84YNZ&sprefix=phone%2Caps%2C796&ref=nb_sb_noss_1
+
+here,
+Path Parameter
+/s
+
+
+Query Parameters
+k=phones
+crid=23H4VILW84YNZ
+sprefix=phone%2Caps%2C796
+ref=nb_sb_noss_1
+
+
+
+| Feature             | **Path Parameter**                                      | **Query Parameter**                       |
+| ------------------- | ------------------------------------------------------- | ----------------------------------------- |
+| **Purpose**         | Identifies a **specific resource**                      | Filters or customizes the **result**      |
+| **Location in URL** | Part of the **URL path**                                | Comes **after `?`** in the URL            |
+| **Syntax Example**  | `/users/101`                                            | `/users?id=101`                           |
+| **UsempId**           | To point to one resource (like a specific user or lead) | To send filters, search terms, or options |
+| **Visibility**      | Mandatory part of the endpoint                          | Optional part of the endpoint             |
+| **Separator**       | `/` slash                                               | `?` for first, `&` for multiple           |
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Q9 what is the difference between URL and URI
+
+URL
+---
+
+URL (Uniform Resource Locator) is a type of URI that specifies the
+resource’s location (address) and how to access it.
+
+
+https://www.google.com/search?q=playwright
+
+This is a URL because it tells:
+Where to go → www.google.com
+How to go → https
+What to access → search results
+
+URI
+---
+
+A URI (Uniform Resource Identifier) is a string that uniquely identifies a resource.
+
+/search?q=playwright
+
+This is a URI because it identifies the resource (search page + query)
+but does not tell the full location
+
+Note:
+-----
+
+1)  URI tells what the resource is.
+    URL tells where the resource is and how to access it.
+
+2)  All URLs are URIs, but not all URIs are URLs.
+
+3)  URL is a complete address, URI is a partial identifier.
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q10. What is the difference between stateless and statefull?
+
+A stateless system means:
+-------------------------
+A stateless system does not remember previous requests.
+Each request is handled independently.
+
+Ex: Request 1 → Login
+    Request 2 → Get User Details
+
+Server does not remember,You must send token/credentials in every request.
+
+
+A stateful system means:
+------------------------
+A stateful system remembers previous requests and maintains user session/state.
+
+EX: Login → Session created
+Next requests → Server remembers user
+
+Server has previous request details, No need to send credentials every time
+
+
+Feature	                  Stateless	       Stateful
+-------                   ---------            --------
+
+Server memory	           No	                 Yes
+Session maintained	   No	                 Yes
+Example	               Search API	       Login session
+Scalability	          High	               Lower
+Common use	       REST APIs	       Banking, Cart
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Assignment:
+-----------
+
+11. What is the difference between test.describe.configure({ mode: 'serial' }) and test.describe.parallel()?
+
+mode: 
+serial(): Runs tests in the same file one after another. Crucially, if one test fails, all subsequent tests in that file are skipped. 
+parallel(): Forces Playwright to run tests within a single file across multiple workers simultaneously to save time.
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+12.You have a very heavy test that takes 2 minutes, but your global timeout is 30 seconds. How do you handle this without changing the global config?
+
+Use test.slow().
+This annotation triples the default timeout for that specific test. If your global timeout is 30s, test.slow() makes it 90s.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+13.You want smoke tests to run first with minimal retries, and full regression to run later with retries and videos. How would you split this using Playwright config?
+
+
+projects: [
+{
+  name: 'Smoke',
+  testMatch: /.*smoke.spec.ts/,
+  retries: 0,
+},
+{
+  name: 'Regression',
+  testIgnore: /.*smoke.spec.ts/,
+  retries: 2,
+  use: { video: 'on', trace: 'retain-on-failure' },
+},
+]
+
+Logical Separation via testMatch and testIgnore
+testMatch in Smoke: This ensures the Smoke project only looks for files ending in .smoke.spec.ts. It creates a focused, high-speed execution gate.
+testIgnore in Regression: In a full regression, you often want to run everything. However, if your Smoke tests are already running in a different CI job, 
+you might use testIgnore to prevent redundancy.
+
+npx playwright test --project=Smoke: Runs only the fast, zero-retry tests.
+npx playwright test --project=Regression: Runs the heavy, resilient suite.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
