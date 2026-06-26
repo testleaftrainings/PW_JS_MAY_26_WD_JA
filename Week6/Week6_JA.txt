@@ -1,0 +1,345 @@
+Q1. How does Playwright support API testing?
+
+Playwright supports API testing through its request object, allowing testers to send requests, validate responses, and integrate API + UI testing seamlessly in one 
+framework.
+
+Uses the built-in APIRequestContext for API testing.
+
+Supports all HTTP methods: GET, POST, PUT, PATCH, DELETE.
+
+Validates status codes, headers, response body, and response time.
+
+Supports authentication (Bearer Token, Basic Auth, API Keys), custom headers, and cookies.
+
+No need for separate tools during automation, making the framework faster and easier to maintain.
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q2. What is `request.newContext()` in Playwright?
+
+request.newContext() creates a new APIRequestContext instance for making API requests.
+
+It maintains an independent session, including its own cookies, headers, and authentication.
+
+Used to configure baseURL, headers, authentication, proxies, and timeouts for API testing.
+
+Enables isolated API testing without affecting other tests.
+
+Helps execute multiple API requests within the same authenticated session.
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Q3. What HTTP methods are commonly used in API testing?
+
+HTTP stands for HyperText Transfer Protocol, used to communicate between a client (like Postman or browser) and a server (API).
+The method part defines the type of operation you want the server to perform.
+
+HTTP methods are defined based on the type of operation you want to perform on a resource (like creating, reading, updating, or deleting data) in an API.
+
+Basic requirement: 
+------------------
+
+When you send an API request, you define:
+
+Endpoint (URL): Where to send the request.
+HTTP Method: What to do with the data.
+Body (optional): Data to send (for POST, PUT, PATCH).
+Headers: Extra information like content type or authorization.
+
+All HTTP Methods :
+------------------
+
+1. GET:
+Used to retrieve data from the server.
+
+2. POST:
+Used to create new data or send data to the server.
+
+3. PUT:
+Used to update or replace an existing resource completely.
+
+4. PATCH:
+Used to partially update a resource.
+
+5. DELETE:
+Used to remove or delete a resource.
+
+6. HEAD:
+Returns only response headers, no body — mainly for checking if the resource exists.
+
+7. OPTIONS:
+Used to know which methods are supported by the server for a given resource.
+
+8. TRACE:
+Used for debugging — shows the path a request takes to reach the server (echoes the request). (Rarely used due to security risks.)
+
+9. CONNECT:
+Used to establish a tunnel (e.g., for HTTPS through a proxy). (Mainly used in networking, not in regular API testing.)
+
+Note:
+-----
+
+In API testing, testers usually focus on GET, POST, PUT, PATCH, DELETE.
+The others (HEAD, OPTIONS, TRACE, CONNECT) are more technical or diagnostic and not commonly tested in functional API automation.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q4. What is status code 200, 201, 204, 400, 401, 403, 404, 500, 503, 504?
+
+A status code is a 3-digit number that the server sends back in response to an API request.
+It tells whether the request was successful, failed, or faced an issue.
+
+HTTP Status Codes in API Testing:
+---------------------------------
+
+200 – OK:
+The request was successful, and the server returned the expected response.
+Example: Data fetched correctly using a GET request.
+
+201 – Created:
+The request was successful, and a new resource has been created.
+Example: New user created successfully using a POST request.
+
+204 – No Content:
+The request was successful, but the server has no content to return.
+Example: After a successful DELETE request — resource deleted.
+
+400 – Bad Request:
+The request was invalid or incorrect — server couldn’t understand it.
+Example: Missing required field or sending wrong data format.
+
+401 – Unauthorized:
+The request requires authentication, but no valid credentials were provided.
+Example: Missing or invalid access token.
+
+403 – Forbidden:
+The client is authenticated, but not allowed to access the resource.
+Example: Trying to access admin data with a normal user token.
+
+404 – Not Found:
+The server cannot find the requested resource.
+Example: The endpoint URL or record doesn’t exist.
+
+500 – Internal Server Error:
+Something went wrong on the server side — a bug or crash in the backend code.
+Example: Database failure or unexpected exception in the API
+
+503 Service Unavailable: 
+The server is temporarily unable to handle the request due to maintenance or being overloaded.
+Example: Server is busy
+
+504 Gateway Timeout: 
+The server, while acting as a gateway or proxy, did not receive a timely response from an upstream server it needed to access to complete the request
+Example:The other server didn't respond in time
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q5. What is the difference between Postman and Playwright API?
+
+Postman is primarily used for manual API development, exploration, and debugging, whereas Playwright API is used for automated API testing, regression execution, 
+and seamless integration with UI automation and CI/CD pipelines.
+
+|      Postman                                                 | Playwright API                                                   |
+| ------------------------------------------------------------ | ---------------------------------------------------------------- |
+| Primarily used for **manual API testing**.                   | Used for **automated API testing**.                              |
+| Requires manual execution of requests.                       | API tests run automatically as part of the test suite.           |
+| Best suited for API development, debugging, and exploration. | Best suited for API validation and UI + API integration testing. |
+| Collections are created and executed in the Postman UI.      | API tests are written in **TypeScript/JavaScript** using code.   |
+| Limited integration with UI automation.                      | Easily combines **API and UI tests** in the same framework.      |
+| Commonly used by developers and testers for API exploration. | Commonly used by automation engineers in CI/CD pipelines.        |
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Q6. What are request headers and why are they important in API testing?
+
+Request headers are key-value pairs sent along with an API request to provide extra information about the request — like authentication, content type, or user details.
+They act like metadata for the API request — giving the server instructions on how to process your request.
+
+Common Examples of Headers:
+--------------------------
+
+1) Postman-Token: A unique identifier automatically generated by Postman to track each request.
+    🔹 Used mainly for debugging or logging.
+    🔹 Not part of the actual API — it helps Postman ensure no duplicate requests when using the “Send” button multiple times.
+
+2) Content-Type: Tells the server what format of data is being sent in the request body.
+    🔹 In your case: application/x-www-form-urlencoded
+    This means the body data is sent in key=value pairs (used often in login or token requests).
+
+3) Content-Length : Indicates the size (in bytes) of the request body.	
+    🔹 Automatically calculated by Postman.
+    🔹 Helps the server know when the body content ends.
+
+4) Host: Specifies the domain name of the server where the request is being sent.
+🔹 Example: login.salesforce.com
+🔹 Required in every HTTP request. EX:https://login.salesforce.com/services/oauth2/token
+
+5) User-Agent:Identifies the client (browser or tool) making the request.
+🔹 Example: PostmanRuntime/7.49.1
+🔹 Helps the server know who is sending the request — useful for analytics and debugging.
+
+6) Accept: Tells the server what response formats the client can handle.
+🔹 Example: */* means “I can accept any format”.
+🔹 Usually you’ll see application/json to specifically request JSON responses.
+
+7) Accept-Encoding:Tells the server what compression types the client supports.
+🔹 Example: gzip, deflate, br
+🔹 The server may compress the response to save bandwidth, and Postman will decompress it automatically.
+
+Note:
+-----
+
+In real API testing, you usually don’t have to manually set headers like Host or Content-Length.
+They are auto-generated by Postman or your test framework (like Playwright or RestAssured).
+But headers like Content-Type, Authorization, and Accept are important to define manually — because they affect how the server interprets your request.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Q7.During automation, the Login API starts returning 401. How will you debug it?
+
+Reproduce the issue to confirm it is consistent.
+
+Verify the authentication details (token, credentials, headers).
+
+Validate the request payload and API endpoint.
+
+Compare the failing request with a working request.
+
+Check the environment configuration (base URL, variables, secrets).
+
+Review the API response and logs for detailed error information.
+
+Coordinate with the backend team if the issue persists.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Q8. what is serialization and deserialization?
+
+Serialization is the process of converting an object into a format like JSON so it can be sent over a network or stored.
+{
+  "username": "admin",
+  "password": "Test@123",
+  "token": "abc123",
+  "role": "Admin"
+}
+
+Deserialization is the process of converting the received JSON back into an object so the application can read and use the data.
+
+const responseBody = await response.json();
+console.log(responseBody.token);
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Q9. What is Schema Validation?
+
+schema validation is the process of verifying that an API request or response matches the expected structure, data types, and required fields.
+
+Scenario-1
+----------
+
+Expected Response Schema
+{
+  "id": "number",
+  "name": "string",
+  "email": "string",
+  "isActive": "boolean"
+}
+
+Actual Response
+{
+  "id": 101,
+  "name": "Bala",
+  "email": "bala@test.com",
+  "isActive": true
+}
+
+Schema Validation Passed because:
+
+id is a number.
+name is a string.
+email is a string.
+isActive is a boolean.
+
+Scenario 2
+----------
+Failed Schema Example
+
+Actual Response
+{
+  "id": "101",
+  "name": "Bala",
+  "email": "bala@test.com"
+}
+
+❌ Schema Validation Failed because:
+
+id should be a number, but it's a string.
+isActive is missing.
+
+
+// Validate responseBody against a predefined JSON schema
+expect(validateSchema(responseBody)).toBe(true);
+
+We can use libraries like AJV (Another JSON Schema Validator) to validate JSON schemas in Playwright.
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Q10. What is the difference between schema validation and response validation?
+
+Schema validation ensures the API response follows the expected structure and data types, whereas response validation ensures the returned data satisfies the 
+application's business requirements.
+
+
+| Schema Validation                                     | Response Validation                               |
+| ----------------------------------------------------- | ------------------------------------------------- |
+| Checks **how the response is formatted**              | Checks **whether the returned data is correct**   |
+| Verifies the **structure** of the JSON                | Verifies the **actual values** in the response    |
+| Ensures all **required fields** are present           | Ensures the **business logic** is correct         |
+| Checks **data types** (String, Number, Boolean, etc.) | Checks **expected results** based on the scenario |
+| Example: `id` should be a **number**                  | Example: `id` should be **101**                   |
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Assignment:
+
+Q1. What are the challenges you faced while integrating API and UI tests in Playwright?
+
+
+1. Keeping test data consistent between API and UI :
+   By creating fresh test data through APIs and validating it only after it was reflected in the UI.
+
+2. Managing authentication and session tokens across API and UI:
+   used reusable authentication utilities and secure token management.
+
+3. Handling flaky tests when APIs were unstable:
+   By adding retries where appropriate, validating API health before UI execution, and using proper error handling.
+
+
+
+Q2. How do you handle "Race Conditions" where a UI test starts before the API data is ready?
+
+   Avoid using hard-coded waits like waitForTimeout().
+   Race conditions are handled by synchronize the UI with the backend by using page.waitForResponse() or page.waitForRequest().
+   Wait for the specific API call to complete before interacting with the UI.
+   Validate that the API returned a successful response (e.g., 200 OK) before proceeding.
+   This makes the test more stable and reduces flaky failures.
+
+
+   page.waitForRequest() → Waits until the API request is sent.
+   page.waitForResponse() → Waits until the API response is received (used before validating the UI).
+
+   Problem:
+   --------
+
+   await page.fill('#search', 'Hari');
+   await page.click('text=Hari'); // Clicks before search results are loaded
+
+ 
+   Stable Solution:
+   ----------------
+   
+   await page.fill('#search', 'Hari');
+ 
+   await page.waitForResponse(response =>
+   response.url().includes('/lead/search') &&
+   response.status() === 200
+   )
+
+   await page.click('text=Hari')
+
+
+
