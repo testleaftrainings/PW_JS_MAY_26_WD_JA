@@ -1,0 +1,431 @@
+1.What are the four main OOP principles? Explain how each one can be used in a test automation framework?
+
+ENCAPSULATION:
+--------------
+
+Helps to keep locators and page actions inside Page Object classes instead of exposing them directly to tests. That improves maintainability because tests only call
+methods like login() instead of interacting with raw locators.
+
+   Example:
+ 
+   class LoginPage {
+     private username = '#username';
+
+     async login(user: string) {
+       await this.page.locator(this.username).fill(user);
+     }
+   }
+----------------------------------------------------------------------------
+
+INHERITANCE:
+------------
+
+Helps reuse common functionality through a BasePage, like click, wait, or
+navigation methods, which child pages can inherit.
+
+   Example:
+   
+   class BasePage {
+     async click(locator: string) {
+       await this.page.locator(locator).click();
+     }
+   }
+
+   class LoginPage extends BasePage {}
+----------------------------------------------------------------------------
+
+POLYMORPHISM:
+-------------
+
+Gives flexibility—for example, the same login() method can support
+username/password login or token-based login with different implementations.
+
+   Example:
+   
+   login(user: string, pass: string)
+   login(token: string)
+----------------------------------------------------------------------------
+
+ABSTRACTION:
+------------
+
+Hides implementation complexity from tests. Instead of tests knowing locator
+details, they simply call business-level methods.
+
+   Example:
+   
+   await loginPage.login('admin', 'pass');
+  
+
+This keeps tests clean, reusable, and easier to maintain in large frameworks.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+2. What is Inheritance in OOP? how it avoids code duplication?  
+
+Inheritance allows one class to reuse the properties and methods of another class. In automation frameworks, page classes extend a BasePage to reuse common 
+methods like click(), fill(), and wait(), which avoids writing the same code in every page class.
+
+          BasePage
+          --------
+          click()
+          fill()
+          wait()
+               ▲
+        -------------------
+        |        |        |
+   LoginPage HomePage CartPage
+      login()  search() checkout()
+
+All child classes share the common methods from BasePage, which eliminates code duplication and keeps the framework easy to maintain.
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+3. What is a constructor in a class?
+   Why is it commonly used in Page Object Model classes?
+
+   A constructor is a special method in a class that is automatically executed when an object of that class is created.
+
+   Example
+   class LoginPage {
+
+
+   constructor(page:Page){
+   this.page = page
+    }
+
+    }
+
+
+   They are used in POM to:
+
+   Initialize the Playwright page object
+   Initialize locators
+   Setup dependencies required for the page
+  
+   Example:
+
+   constructor(page){
+   this.page = page
+   this.username = page.locator('#username')
+   }
+
+so, Each Page Object receives the same browser page instance.
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+4. In an automation framework, why would you make locators or methods private inside a Page Object class?
+
+ Locators are usually made private to enforce encapsulation.
+
+ Reasons:
+ Prevent direct access from test files
+ Ensure locators are used only through page methods
+ Reduce accidental misuse
+ Improve maintainability
+
+Example:
+
+class LoginPage {
+
+ private usernameField
+ private passwordField
+
+ async login(user, pass){
+   await this.usernameField.fill(user)
+ }
+}
+
+
+Tests should call:
+loginPage.login()
+
+Not
+page.locator('#username')
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+5. What is the Page Object Model, and why is it considered a best practice in automation frameworks?
+
+The Page Object Model is a design pattern where each application page is represented as a separate class containing its locators and methods.
+Test scripts interact with these methods instead of directly using locators. This improves readability, reduces duplicate code, centralizes locators, and
+makes the automation framework easier to maintain and scale.
+
+Example:
+
+LoginPage.ts
+DashboardPage.ts
+ProfilePage.ts
+
+
+If the login button locator changes from:
+#login
+
+to
+#signin
+
+You update it only in LoginPage.ts, and all test cases using the login() method continue to work without any changes.
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+6. If two pages share similar functionality such as:
+
+search()
+logout()
+navigation menu
+How would you reuse this logic using POM?
+
+Shared functionality can be extracted into a BasePage or component class.
+
+Example
+Create BasePage:
+
+class BasePage {
+
+ async search(text){
+ }
+
+ async logout(){
+ }
+
+}
+
+Other pages extend it:
+
+class DashboardPage extends BasePage {}
+class ProductsPage extends BasePage {}
+
+Avoid duplicate code.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+7. What are fixtures in Playwright, and why are they important for building scalable frameworks?
+
+Fixtures in Playwright are reusable setup functions that provide dependencies to tests.
+
+Examples:
+
+browser
+page
+API context
+login session
+page objects
+
+customeFixture.ts
+------------------
+
+export const test = base.extend({
+
+ loginPage: async ({ page }, use) => {
+   const login = new LoginPage(page)
+   await use(login)
+ }
+
+})
+
+test
+-----
+
+import test from ' customeFixture.ts'
+test('test',async({page,LoginPage}))
+
+Why fixtures are important
+
+Reduce duplicate setup code
+Improve test readability
+Manage dependencies efficiently
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+8. what is the difference between Abstract class and interface
+
+
+
+| Abstract Class                                    | Interface                                                                            |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Can have implemented methods and abstract methods | Only defines method/property contracts (no method implementation in the basic sense) |
+| Can have constructors                             | Cannot have constructors                                                             |
+| A class **extends** an abstract class             | A class **implements** an interface                                                  |
+| Used to share common code                         | Used to define a common contract                                                     |
+| Supports code reuse                               | Focuses on behavior, not implementation                                              |
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+9. If multiple tests depend on the same test data, how would you avoid data conflicts in parallel execution?
+
+When tests run in parallel, using the same test data can cause conflicts because multiple tests may update or delete the same records.
+
+I use the following approaches:
+
+1. Generate Unique Test Data (Recommended)
+
+Create unique data for every test using a timestamp or random value.
+
+Example:
+
+const username = `hari${Date.now()}@test.com`;
+
+Output:
+
+hari1751456789@test.com
+
+This ensures each test uses a different user.
+
+2. Create Fresh Test Data Using APIs
+
+Before every test:
+
+Create a new user using an API.
+Execute the UI test.
+Delete the user after the test.
+
+Flow:
+----
+
+Create User (API)
+       ↓
+Run UI Test
+       ↓
+Delete User
+
+3. Use Faker Library
+
+Generate random test data dynamically.
+
+Example:
+
+const firstName = faker.person.firstName();
+const email = faker.internet.email();
+
+Every execution creates new data, avoiding conflicts.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+10. What is the difference between super and this keyword?
+
+this(current class)
+-------------------
+
+class LoginPage {
+
+    constructor(private page: Page) {}
+
+    async login() {
+        await this.page.click("#login");
+    }
+}
+
+this.page refers to the current LoginPage object.
+
+
+super (Parent Class)
+--------------------
+
+class BasePage {
+
+    async click(locator) {
+        await locator.click();
+    }
+
+}
+
+class LoginPage extends BasePage {
+
+    async login() {
+        super.click(this.page.locator("#login"));
+    }
+
+}
+
+super.click() calls the click() method from BasePage.
+
+
+| **`this`**                                                      | **`super`**                                             |
+| --------------------------------------------------------------- | ------------------------------------------------------- |
+| Refers to the **current class object**.                         | Refers to the **parent (base) class object**.           |
+| Used to access current class variables and methods.             | Used to access parent class variables and methods.      |
+| Can call the current class constructor using `this()`.          | Can call the parent class constructor using `super()`.  |
+| Used within the same class.                                     | Used only in a child class that extends a parent class. |
+| Example: `this.page.click()`                                    | Example: `super.click()`                                |
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Assignment:
+-----------
+
+1. You have two different payment gateways: Stripe and PayPal. Both need a processPayment(amount) method, but the implementation is completely different.  
+   How would you use Polymorphism to write a single test that works with any payment gateway without changing the test logic?
+
+   I would create a common interface or parent class with a processPayment() method, and then implement it differently for Stripe and PayPal. The test would work 
+   against the common contract instead of knowing gateway-specific details. That's polymorphism—the same method behaving differently based on the object passed.
+
+   Example:
+   
+   interface PaymentGateway {
+     processPayment(amount: number): Promise<void>;
+   }
+
+   class StripePayment implements PaymentGateway {
+     async processPayment(amount: number) {
+       console.log(`Processing ${amount} via Stripe`);
+     }
+   }
+
+   class PayPalPayment implements PaymentGateway {
+     async processPayment(amount: number) {
+       console.log(`Processing ${amount} via PayPal`);
+     }
+   }
+  
+   Single reusable test logic:
+   ---------------------------
+
+   async function executePayment(gateway: PaymentGateway) {
+     await gateway.processPayment(500);
+   }
+
+   await executePayment(new StripePayment());
+   await executePayment(new PayPalPayment());
+   
+  This keeps the test scalable because adding a new gateway like RazorPay later doesn't require changing the core test flow.
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2. Your Playwright framework has grown to 200+ tests. Login logic is duplicated across 50 test files. When the login flow changed recently, you had to update 50 places. 
+   How would Custom Fixtures improve reusability and maintainability compared to utility functions or beforeEach() hooks?
+
+  Custom Fixtures would centralize the login setup in one reusable place instead of repeating it across test files. If the login flow changes, I only update the 
+  fixture once instead of modifying 50 tests. Compared to utility functions, fixtures integrate better with Playwright lifecycle management and dependency injection.
+
+  Unlike beforeEach(), fixtures are more modular and reusable because tests can request only the setup they need, like authenticated user, admin session,or API context.
+  They also improve readability since tests focus on business validation instead of setup steps.
+
+   Example: 
+  
+   // fixtures/auth.fixture.ts
+   import { test as base } from '@playwright/test';
+
+   export const test = base.extend({
+     authenticatedPage: async ({ page }, use) => {
+       await page.goto('/login');
+       await page.fill('#username', 'admin');
+       await page.fill('#password', 'pass123');
+       await page.click('#login');
+       await expect(page).toHaveURL('/dashboard');
+       await use(page);
+     }
+   });
+   
+
+   Using the fixture in tests:
+   ---------------------------
+   import { test } from '../fixtures/auth.fixture';
+
+   test('verify dashboard', async ({ authenticatedPage }) => {
+     await authenticatedPage.click('#reports');
+   });
+  
+
+   This makes the framework cleaner, scalable, and easier to maintain for large suites.
+
+ ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
